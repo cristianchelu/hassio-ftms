@@ -36,7 +36,7 @@ from pyftms import (
     get_machine_type_from_service_data,
 )
 
-from .const import DOMAIN
+from .const import CONF_PROTOCOL, DEFAULT_PROTOCOL, DOMAIN, PROTOCOLS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -174,7 +174,15 @@ class OptionsFlowHandler(OptionsFlowWithConfigEntry):
                             "translation_key": CONF_SENSORS,
                         }
                     }
-                )
+                ),
+                vol.Required(CONF_PROTOCOL, default=DEFAULT_PROTOCOL): selector(
+                    {
+                        "select": {
+                            "options": PROTOCOLS,
+                            "translation_key": CONF_PROTOCOL,
+                        }
+                    }
+                ),
             }
         )
 
@@ -192,6 +200,7 @@ class FTMSConfigFlow(ConfigFlow, domain=DOMAIN):
     _ble_info: BluetoothServiceInfoBleak
     _discovered_devices: dict[str, BluetoothServiceInfoBleak]
     _discovery_time: float
+    _protocol: str = DEFAULT_PROTOCOL
     _suggested_sensors: list[str]
 
     _ftms: FitnessMachine | None = None
@@ -281,6 +290,7 @@ class FTMSConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             self._discovery_time = 30 if user_input[CONF_DISCOVERY] == "auto" else 0
+            self._protocol = user_input[CONF_PROTOCOL]
             return await self.async_step_ble_request()
 
         # here we know device
@@ -298,13 +308,21 @@ class FTMSConfigFlow(ConfigFlow, domain=DOMAIN):
                         }
                     }
                 ),
+                vol.Required(CONF_PROTOCOL): selector(
+                    {
+                        "select": {
+                            "options": PROTOCOLS,
+                            "translation_key": CONF_PROTOCOL,
+                        }
+                    }
+                ),
             }
         )
 
         return self.async_show_form(
             step_id="confirm",
             data_schema=self.add_suggested_values_to_schema(
-                schema, {CONF_DISCOVERY: "auto"}
+                schema, {CONF_DISCOVERY: "auto", CONF_PROTOCOL: DEFAULT_PROTOCOL}
             ),
             description_placeholders=placeholders,
         )
@@ -317,7 +335,9 @@ class FTMSConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if self._ftms is None:
             info = self._ble_info
-            self._ftms = get_client(info.device, info.advertisement)
+            self._ftms = get_client(
+                info.device, info.advertisement, protocol=self._protocol
+            )
 
         uncompleted_task: asyncio.Task[None] | None = None
         ftms = self._ftms
@@ -385,7 +405,10 @@ class FTMSConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_create_entry(
                 title=" ".join((s1, s2, s3)),
                 data={CONF_ADDRESS: self._ftms.address},
-                options={CONF_SENSORS: user_input[CONF_SENSORS]},
+                options={
+                    CONF_SENSORS: user_input[CONF_SENSORS],
+                    CONF_PROTOCOL: self._protocol,
+                },
             )
 
         schema = vol.Schema(

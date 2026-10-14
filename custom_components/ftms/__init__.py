@@ -19,7 +19,7 @@ from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
 
-from .const import DOMAIN
+from .const import CONF_PROTOCOL, DEFAULT_PROTOCOL, DOMAIN
 from .coordinator import DataCoordinator
 from .models import FtmsData
 
@@ -89,6 +89,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: FtmsConfigEntry) -> bool
             srv_info.device,
             srv_info.advertisement,
             on_disconnect=_on_disconnect,
+            protocol=entry.options.get(CONF_PROTOCOL, DEFAULT_PROTOCOL),
         )
 
     except pyftms.NotFitnessMachineError:
@@ -219,5 +220,9 @@ async def _async_entry_update_handler(
 ) -> None:
     """Options update handler."""
 
-    if entry.options[CONF_SENSORS] != entry.runtime_data.sensors:
+    if (
+        entry.options[CONF_SENSORS] != entry.runtime_data.sensors
+        or entry.options.get(CONF_PROTOCOL, DEFAULT_PROTOCOL)
+        != entry.runtime_data.ftms.protocol
+    ):
         hass.config_entries.async_schedule_reload(entry.entry_id)
