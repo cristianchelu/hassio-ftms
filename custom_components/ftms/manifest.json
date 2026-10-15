@@ -17,6 +17,6 @@
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/michaelw/hassio-ftms/issues",
   "loggers": ["pyftms"],
-  "requirements": ["pyftms @ git+https://github.com/michaelw/python-pyftms.git@v0.4.15+mw.6"],
+  "requirements": ["pyftms @ git+https://github.com/cristianchelu/python-pyftms.git@c38b2097f94bd30ea7d927bf43228c6fd3c7d6a8"],
   "version": "0.24.6+mw.9"
 }
